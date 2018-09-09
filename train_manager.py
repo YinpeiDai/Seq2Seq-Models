@@ -24,6 +24,9 @@ class TrainManager:
         self.all_tokens['z'] = len(self.all_tokens)
         self.reverse_vocab_dict = dict(zip(self.vocab_dict.values(), self.vocab_dict.keys()))
         self.dataset = ToyDataset()
+        self.tested_examples = ['circumstances', 'affirmative', 'corresponding', 'caraphernology',
+                                'experimentation', 'dizziness', 'harambelover', 'terrifyingly',
+                                'axbycydxexfyzxxy']
 
 
     def tok2idx(self, batch_data):
@@ -100,11 +103,8 @@ class Train_BasicEncoderDecoder(TrainManager):
                                         model.keep_prob: 1.0})
 
                     # test some difficult examples
-                    examples = ['circumstances', 'affirmative', 'corresponding', 'caraphernology',
-                                'experimentation', 'dizziness', 'harambelover', 'terrifyingly',
-                                'axbycydxexfyzxxy']
                     encoder_inputs, decoder_inputs, decoder_outputs, \
-                        = self.tok2idx((examples, examples))
+                        = self.tok2idx((self.tested_examples, self.tested_examples))
                     pred = sess.run(model.predict,
                                     feed_dict={
                                         model.encoder_inputs: encoder_inputs,
@@ -112,7 +112,7 @@ class Train_BasicEncoderDecoder(TrainManager):
                                         model.decoder_outputs: decoder_outputs,
                                         model.keep_prob: 1.0})
 
-                    for ii in range(len(examples)):
+                    for ii in range(len(self.tested_examples)):
                         print()
                         print('true output:',
                               " ".join([self.reverse_vocab_dict[word_id] for word_id in decoder_outputs[ii]]))
@@ -154,11 +154,8 @@ class Train_AttenNet(TrainManager):
                                         model.keep_prob: 1.0})
 
                     # test some difficult examples
-                    examples = ['circumstances', 'affirmative', 'corresponding', 'caraphernology',
-                                'experimentation', 'dizziness', 'harambelover', 'terrifyingly',
-                                'axbycydxexfyzxxy']
                     encoder_inputs, decoder_inputs, decoder_outputs, \
-                        = self.tok2idx((examples, examples))
+                        = self.tok2idx((self.tested_examples, self.tested_examples))
                     pred, cum_att_weights = sess.run([model.predict, model.cum_att_weights],
                                     feed_dict={
                                         model.encoder_inputs: encoder_inputs,
@@ -166,7 +163,7 @@ class Train_AttenNet(TrainManager):
                                         model.decoder_outputs: decoder_outputs,
                                         model.keep_prob: 1.0})
 
-                    for ii in range(len(examples)):
+                    for ii in range(len(self.tested_examples)):
                         print()
                         print('true output:',
                               " ".join([self.reverse_vocab_dict[word_id] for word_id in decoder_outputs[ii]]))
@@ -194,7 +191,7 @@ class Train_CopyNet(TrainManager):
         encoder_max_length = 0
         for sent in source_sent:
             encoder_max_length = max(encoder_max_length, len(sent))
-        encoder_inputs = np.zeros(dtype=int, shape=(batchsize, encoder_max_length))  # for CopyNet
+        encoder_inputs = np.zeros(dtype=int, shape=(batchsize, encoder_max_length))
 
         batch_OOV_tokens = []
 
@@ -211,8 +208,8 @@ class Train_CopyNet(TrainManager):
         for sent in target_sent:
             decoder_max_length = max(decoder_max_length, len(sent))
 
-        decoder_inputs = np.zeros(dtype=int, shape=(batchsize, decoder_max_length + 1))  # for CopyNet
-        decoder_outputs = np.zeros(dtype=int, shape=(batchsize, decoder_max_length + 1))  # for CopyNet
+        decoder_inputs = np.zeros(dtype=int, shape=(batchsize, decoder_max_length + 1))
+        decoder_outputs = np.zeros(dtype=int, shape=(batchsize, decoder_max_length + 1))
         for i, sent in enumerate(target_sent):
             for j, token in enumerate(sent):
                 if token in self.vocab_dict:
@@ -264,21 +261,17 @@ class Train_CopyNet(TrainManager):
                                                model.batch_OOV_num: [len(tokens) for tokens in batch_OOV_tokens],
                                                model.keep_prob: 1.0})
 
-                    # visualize the atten weights
-                    examples = ['circumstances', 'affirmative', 'corresponding', 'caraphernology',
-                                'experimentation', 'dizziness', 'harambelover', 'terrifyingly',
-                                'axbycydxexfyzxxy']
+
                     encoder_inputs, decoder_inputs, decoder_outputs, batch_OOV_tokens \
-                        = self.tok2idx((examples, examples))
+                        = self.tok2idx((self.tested_examples, self.tested_examples))
                     pred = sess.run(model.predict,
                                     feed_dict={model.encoder_inputs: encoder_inputs,
                                                model.decoder_inputs: decoder_inputs,
                                                model.decoder_outputs: decoder_outputs,
                                                model.batch_OOV_num: [len(tokens) for tokens in batch_OOV_tokens],
                                                model.keep_prob: 1.0})
-                    #
 
-                    for ii in range(len(examples)):
+                    for ii in range(len(self.tested_examples)):
                         print()
                         print('true output:', " ".join([self.reverse_vocab_dict[word_id]
                                                         if word_id < self.vocab_size

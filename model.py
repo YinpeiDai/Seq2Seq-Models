@@ -213,9 +213,6 @@ class AttenNet(BasicEncoderDecoder):
                 decoder_rnn_outputs = decoder_rnn_outputs.write(time, attention_vector)
                 return time + 1, state, max_len, decoder_rnn_outputs, cum_att_weights
 
-            # output_ta = tuple([0 for _ in range(self.decoder_max_len.numpy())]
-            #                   for i in range(self.decoder_hidden_size))
-
             decoder_rnn_outputs = tf.TensorArray(
                 dtype=tf.float32,
                 size=self.decoder_max_len,
@@ -322,9 +319,12 @@ class CopyNet(BasicEncoderDecoder):
                     depth=self.vocab_size + self.batch_OOV_num_max)
                 prob_c = tf.einsum("ijn,ij->in", encoder_inputs_one_hot, prob_c)
 
+                # if encoder inputs has intersection words with vocab dict,
+                # move copy mode probability to generate mode probability
+                #
                 prob_g = prob_g + prob_c[:,:self.vocab_size]
                 prob_c = prob_c[:,self.vocab_size:]
-                prob_final = tf.concat([prob_g, prob_c], axis=1) + 1e-10
+                prob_final = tf.concat([prob_g, prob_c], axis=1) + 1e-10  # batch * (vocab_size + OOV_size)
 
                 output_prob_list = output_prob_list.write(time, prob_final)
 
@@ -341,8 +341,8 @@ class CopyNet(BasicEncoderDecoder):
                            self.output_prob_list
                            ]
             )
-            self.output_probs = self.output_prob_list.stack()  # de_seqs * batch * (vocab_size + encoder_max_len)
-            self.output_probs = tf.transpose(self.output_probs, perm=[1, 0, 2])  # batch * decoder_max_len * (vocab_size + encoder_max_len)
+            self.output_probs = self.output_prob_list.stack()  # decoder_max_len * batch * (vocab_size + OOV_size)
+            self.output_probs = tf.transpose(self.output_probs, perm=[1, 0, 2])  # batch * decoder_max_len * (vocab_size + OOV_size)
 
     def build_loss(self):
         with tf.variable_scope("loss"):
