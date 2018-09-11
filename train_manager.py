@@ -246,8 +246,8 @@ class Train_CopyNet(TrainManager):
                                             feed_dict={model.encoder_inputs: encoder_inputs,
                                                        model.decoder_inputs: decoder_inputs,
                                                        model.decoder_outputs: decoder_outputs,
-                                                       model.batch_OOV_num: [len(tokens) for tokens in
-                                                                             batch_OOV_tokens],
+                                                       model.batch_OOV_num: np.max([len(tokens) for tokens in
+                                                                             batch_OOV_tokens]),
                                                        model.keep_prob: 0.5})
                 average_loss += training_loss / plot_every_steps
 
@@ -258,7 +258,8 @@ class Train_CopyNet(TrainManager):
                                     feed_dict={model.encoder_inputs: encoder_inputs,
                                                model.decoder_inputs: decoder_inputs,
                                                model.decoder_outputs: decoder_outputs,
-                                               model.batch_OOV_num: [len(tokens) for tokens in batch_OOV_tokens],
+                                               model.batch_OOV_num: np.max([len(tokens) for tokens in
+                                                                             batch_OOV_tokens]),
                                                model.keep_prob: 1.0})
 
 
@@ -268,7 +269,8 @@ class Train_CopyNet(TrainManager):
                                     feed_dict={model.encoder_inputs: encoder_inputs,
                                                model.decoder_inputs: decoder_inputs,
                                                model.decoder_outputs: decoder_outputs,
-                                               model.batch_OOV_num: [len(tokens) for tokens in batch_OOV_tokens],
+                                               model.batch_OOV_num: np.max([len(tokens) for tokens in
+                                                                             batch_OOV_tokens]),
                                                model.keep_prob: 1.0})
 
                     for ii in range(len(self.tested_examples)):

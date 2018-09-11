@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import pprint
 
 class BasicEncoderDecoder:
     '''
@@ -277,8 +278,7 @@ class CopyNet(BasicEncoderDecoder):
             self.weights_generate = tf.get_variable(
                 "weights_generate", shape=[self.decoder_hidden_size, self.vocab_size])
             self.batch_OOV_num = tf.placeholder(
-                tf.int32, shape=[None], name="batch_OOV_num")
-            self.batch_OOV_num_max = tf.argmax(self.batch_OOV_num, output_type=tf.int32)
+                tf.int32, shape=[], name="batch_OOV_num")
 
 
             def cond(time, state, copy_pro, max_len, output_prob_list):
@@ -311,19 +311,20 @@ class CopyNet(BasicEncoderDecoder):
 
 
                 mix_score = tf.concat([generate_score, copy_score], axis=1)  # batch * (vocab_size + encoder_max_len)
-                probs = tf.nn.softmax(mix_score)
+                probs = tf.cast(tf.nn.softmax(mix_score), tf.float32)
                 prob_g = probs[:, :self.vocab_size]
                 prob_c = probs[:, self.vocab_size:]
+
                 encoder_inputs_one_hot = tf.one_hot(
                     indices=self.encoder_inputs,
-                    depth=self.vocab_size + self.batch_OOV_num_max)
+                    depth=self.vocab_size + self.batch_OOV_num)
                 prob_c = tf.einsum("ijn,ij->in", encoder_inputs_one_hot, prob_c)
 
                 # if encoder inputs has intersection words with vocab dict,
                 # move copy mode probability to generate mode probability
-                #
-                prob_g = prob_g + prob_c[:,:self.vocab_size]
-                prob_c = prob_c[:,self.vocab_size:]
+
+                prob_g = prob_g + prob_c[:, :self.vocab_size]
+                prob_c = prob_c[:, self.vocab_size:]
                 prob_final = tf.concat([prob_g, prob_c], axis=1) + 1e-10  # batch * (vocab_size + OOV_size)
 
                 output_prob_list = output_prob_list.write(time, prob_final)
@@ -336,7 +337,7 @@ class CopyNet(BasicEncoderDecoder):
                 cond, body,
                 loop_vars=[0,
                            self.decoder_init_state,
-                           tf.zeros([self.batch_size, self.batch_OOV_num_max], dtype=tf.float32),
+                           tf.zeros([self.batch_size, self.batch_OOV_num], dtype=tf.float32),
                            self.decoder_max_len,
                            self.output_prob_list
                            ]
@@ -347,10 +348,12 @@ class CopyNet(BasicEncoderDecoder):
     def build_loss(self):
         with tf.variable_scope("loss"):
             self.decoder_outputs_one_hot = tf.one_hot(
-                self.decoder_outputs, self.vocab_size + self.batch_OOV_num_max)
+                self.decoder_outputs, self.vocab_size + self.batch_OOV_num)
             self.crossent = - tf.reduce_sum(
                 self.decoder_outputs_one_hot * tf.log(self.output_probs), -1)
             self.nonzeros = tf.count_nonzero(self.decoder_mask)
             self.decoder_mask = tf.cast(self.decoder_mask, dtype=tf.float32)
             self.train_loss = (tf.reduce_sum(self.crossent * self.decoder_mask) /
                                tf.cast(self.nonzeros, tf.float32))
+
+
